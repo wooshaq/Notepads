@@ -4,7 +4,13 @@
 [Setup]
 AppId={{6B1E5D2A-7C3F-4E8B-9A21-5D0C8F3E7A11}
 AppName=Notepads Sublime
-AppVersion=1.5.6
+#ifndef MyVersion
+  #define MyVersion "1.5.6.0"
+#endif
+AppVersion={#MyVersion}
+VersionInfoVersion={#MyVersion}
+RestartIfNeededByRun=no
+CloseApplications=no
 AppPublisher=wooshaq
 DefaultDirName={autopf}\Notepads Sublime
 DisableDirPage=yes

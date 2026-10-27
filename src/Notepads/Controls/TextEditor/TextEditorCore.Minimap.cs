@@ -18,6 +18,8 @@ namespace Notepads.Controls.TextEditor
     using Windows.UI.Xaml.Controls;
     using Windows.UI.Xaml.Controls.Primitives;
     using Windows.UI.Xaml.Input;
+    using Windows.UI.Xaml.Media;
+    using Windows.System;
 
     [TemplatePart(Name = MinimapCanvasName, Type = typeof(CanvasControl))]
     [TemplatePart(Name = EditorVerticalScrollBarName, Type = typeof(ScrollBar))]
@@ -50,7 +52,14 @@ namespace Notepads.Controls.TextEditor
         private double _minimapDragStartVerticalOffset;
         private bool _isScrollBarThumbDragging;
 
-        private double _scrollPastEndExtraSpace = -1;
+        // "Scroll past end": RichEditBox does not let us enlarge its scroll extent, so the extra
+        // space is virtual: once the real ScrollViewer is at the bottom, the text area, line numbers
+        // and line highlighter are translated up by _pastEndOffset.
+        private double _pastEndOffset;
+        private readonly TranslateTransform _pastEndTextTransform = new TranslateTransform();
+        private readonly TranslateTransform _pastEndLineNumberTransform = new TranslateTransform();
+        private readonly TranslateTransform _pastEndHighlighterTransform = new TranslateTransform();
+        private UIElement _contentScrollViewerContent;
 
         private struct MinimapGeometry
         {
@@ -102,12 +111,43 @@ namespace Notepads.Controls.TextEditor
                 }
             }
 
+            if (ScrollPastEndEnabled)
+            {
+                if (VisualTreeHelper.GetParent(_contentScrollViewer) is UIElement textHost)
+                {
+                    textHost.RenderTransform = _pastEndTextTransform;
+                }
+                _lineNumberGrid.RenderTransform = _pastEndLineNumberTransform;
+                _lineHighlighterAndIndicatorCanvas.RenderTransform = _pastEndHighlighterTransform;
+
+                // Wheel over the text: catch it before the ScrollViewer does (bubbling order)
+                // Wheel over the empty "past end" area: comes to the editor itself
+                AddHandler(PointerWheelChangedEvent, new PointerEventHandler(OnEditorPointerWheelForPastEnd), false);
+            }
+
             ActualThemeChanged += OnActualThemeChangedForMinimap;
+        }
+
+        private void HookContentWheelHandlerForPastEnd()
+        {
+            if (!ScrollPastEndEnabled || _contentScrollViewer == null) return;
+            if (!(_contentScrollViewer.Content is UIElement content) || ReferenceEquals(content, _contentScrollViewerContent)) return;
+
+            _contentScrollViewerContent?.RemoveHandler(PointerWheelChangedEvent, new PointerEventHandler(OnContentPointerWheelForPastEnd));
+            _contentScrollViewerContent = content;
+            _contentScrollViewerContent.AddHandler(PointerWheelChangedEvent, new PointerEventHandler(OnContentPointerWheelForPastEnd), false);
         }
 
         private void DisposeSublimeLikeFeatures()
         {
             ActualThemeChanged -= OnActualThemeChangedForMinimap;
+
+            if (ScrollPastEndEnabled)
+            {
+                RemoveHandler(PointerWheelChangedEvent, new PointerEventHandler(OnEditorPointerWheelForPastEnd));
+                _contentScrollViewerContent?.RemoveHandler(PointerWheelChangedEvent, new PointerEventHandler(OnContentPointerWheelForPastEnd));
+                _contentScrollViewerContent = null;
+            }
 
             if (_minimapCanvas != null)
             {
@@ -160,25 +200,130 @@ namespace Notepads.Controls.TextEditor
 
         #region Scroll past end
 
+        private double GetMaxPastEndOffset()
+        {
+            if (!ScrollPastEndEnabled || _contentScrollViewer == null) return 0;
+            var sv = _contentScrollViewer;
+            // Last line may go up to the very top of the viewport
+            var visibleTextPart = sv.ExtentHeight - Math.Max(0, sv.ScrollableHeight);
+            return Math.Max(0, visibleTextPart - GetSingleLineHeight());
+        }
+
+        private double GetEffectiveVerticalOffset() => _contentScrollViewer.VerticalOffset + _pastEndOffset;
+        private double GetEffectiveScrollableHeight() => Math.Max(0, _contentScrollViewer.ScrollableHeight) + GetMaxPastEndOffset();
+        private double GetEffectiveExtentHeight() => _contentScrollViewer.ExtentHeight + GetMaxPastEndOffset();
+
+        private void SetPastEndOffset(double value)
+        {
+            value = Math.Min(Math.Max(0, value), GetMaxPastEndOffset());
+            if (Math.Abs(value - _pastEndOffset) < 0.01) return;
+
+            _pastEndOffset = value;
+            _pastEndTextTransform.Y = -value;
+            _pastEndLineNumberTransform.Y = -value;
+            _pastEndHighlighterTransform.Y = -value;
+
+            SyncEditorVerticalScrollBar();
+            _minimapCanvas?.Invalidate();
+        }
+
+        /// <summary>Re-clamp after text / size changes; keep caret visible.</summary>
         private void UpdateScrollPastEndSpace()
         {
             if (!ScrollPastEndEnabled || _contentScrollViewer == null) return;
-
-            // RichEditBox puts its internal text view as the ScrollViewer content.
-            // A bottom margin on it enlarges the scrollable extent, so the last line can reach the top.
-            if (!(_contentScrollViewer.Content is FrameworkElement textView)) return;
-
-            var extra = Math.Max(0, _contentScrollViewer.ViewportHeight - GetSingleLineHeight());
-            if (Math.Abs(extra - _scrollPastEndExtraSpace) < 0.5) return;
-
-            _scrollPastEndExtraSpace = extra;
-            var margin = textView.Margin;
-            textView.Margin = new Thickness(margin.Left, margin.Top, margin.Right, extra);
+            HookContentWheelHandlerForPastEnd();
+            SetPastEndOffset(_pastEndOffset);
         }
 
-        private double GetScrollPastEndSpace()
+        private void EnsureCaretVisibleWithPastEnd()
         {
-            return ScrollPastEndEnabled && _scrollPastEndExtraSpace > 0 ? _scrollPastEndExtraSpace : 0;
+            if (!ScrollPastEndEnabled || _pastEndOffset <= 0 || _contentScrollViewer == null) return;
+
+            // RichEditBox scrolled the caret into ITS viewport; the virtual offset may still hide it above
+            Document.Selection.GetRect(Windows.UI.Text.PointOptions.ClientCoordinates, out var rect, out _);
+            var caretTopInViewport = rect.Y - _contentScrollViewer.VerticalOffset;
+            if (caretTopInViewport < _pastEndOffset)
+            {
+                SetPastEndOffset(Math.Max(0, caretTopInViewport));
+            }
+        }
+
+        /// <summary>Scroll to an offset in "effective" space (real offset + virtual past-end space).</summary>
+        private void ScrollToEffectiveOffset(double target)
+        {
+            var sv = _contentScrollViewer;
+            if (sv == null) return;
+
+            var scrollable = Math.Max(0, sv.ScrollableHeight);
+            target = Math.Min(Math.Max(0, target), GetEffectiveScrollableHeight());
+
+            if (target <= scrollable)
+            {
+                SetPastEndOffset(0);
+                sv.ChangeView(null, target, null, true);
+            }
+            else
+            {
+                if (sv.VerticalOffset < scrollable - 0.5) sv.ChangeView(null, scrollable, null, true);
+                SetPastEndOffset(target - scrollable);
+            }
+        }
+
+        private bool IsAtRealBottom()
+        {
+            var sv = _contentScrollViewer;
+            var scrollable = Math.Max(0, sv.ScrollableHeight);
+            // _contentScrollViewerVerticalOffset = final view of a running scroll animation
+            return sv.VerticalOffset >= scrollable - 1 && _contentScrollViewerVerticalOffset >= scrollable - 1;
+        }
+
+        /// <summary>Returns true when the wheel step was used for the virtual past-end space.</summary>
+        private bool TryHandleWheelForPastEnd(int wheelDelta)
+        {
+            if (!ScrollPastEndEnabled || _contentScrollViewer == null || wheelDelta == 0) return false;
+
+            var step = GetSingleLineHeight() * 3 * Math.Abs(wheelDelta) / 120.0;
+
+            if (wheelDelta < 0) // down
+            {
+                if (!IsAtRealBottom() || _pastEndOffset >= GetMaxPastEndOffset() - 0.01) return false;
+                SetPastEndOffset(_pastEndOffset + step);
+                return true;
+            }
+
+            if (_pastEndOffset > 0) // up, first eat the virtual space
+            {
+                SetPastEndOffset(_pastEndOffset - step);
+                return true;
+            }
+
+            return false;
+        }
+
+        private static bool HasWheelModifiers(PointerRoutedEventArgs e)
+        {
+            return (e.KeyModifiers & (VirtualKeyModifiers.Control | VirtualKeyModifiers.Shift | VirtualKeyModifiers.Menu)) != 0;
+        }
+
+        // Wheel over the text area (fires before the ScrollViewer handles it)
+        private void OnContentPointerWheelForPastEnd(object sender, PointerRoutedEventArgs e)
+        {
+            if (HasWheelModifiers(e)) return;
+            var delta = e.GetCurrentPoint((UIElement)sender).Properties.MouseWheelDelta;
+            if (TryHandleWheelForPastEnd(delta)) e.Handled = true;
+        }
+
+        // Wheel over the empty area below the text (not over the ScrollViewer)
+        private void OnEditorPointerWheelForPastEnd(object sender, PointerRoutedEventArgs e)
+        {
+            if (HasWheelModifiers(e) || _contentScrollViewer == null) return;
+            var delta = e.GetCurrentPoint(this).Properties.MouseWheelDelta;
+            if (!TryHandleWheelForPastEnd(delta))
+            {
+                var step = GetSingleLineHeight() * 3 * delta / 120.0;
+                ScrollToEffectiveOffset(GetEffectiveVerticalOffset() - step);
+            }
+            e.Handled = true;
         }
 
         #endregion
@@ -190,7 +335,7 @@ namespace Notepads.Controls.TextEditor
             if (!AlwaysVisibleScrollBarEnabled || _editorVerticalScrollBar == null) return;
 
             var sv = _contentScrollViewer;
-            var max = Math.Max(0, sv.ScrollableHeight);
+            var max = GetEffectiveScrollableHeight();
             var lineHeight = GetSingleLineHeight();
 
             _editorVerticalScrollBar.Minimum = 0;
@@ -202,7 +347,7 @@ namespace Notepads.Controls.TextEditor
 
             if (!_isScrollBarThumbDragging)
             {
-                _editorVerticalScrollBar.Value = Math.Min(max, Math.Max(0, sv.VerticalOffset));
+                _editorVerticalScrollBar.Value = Math.Min(max, Math.Max(0, GetEffectiveVerticalOffset()));
             }
         }
 
@@ -213,7 +358,7 @@ namespace Notepads.Controls.TextEditor
             _isScrollBarThumbDragging = e.ScrollEventType == ScrollEventType.ThumbTrack;
             if (e.ScrollEventType == ScrollEventType.EndScroll) _isScrollBarThumbDragging = false;
 
-            _contentScrollViewer.ChangeView(null, e.NewValue, null, true);
+            ScrollToEffectiveOffset(e.NewValue);
         }
 
         private void OnSidePanelPointerWheelChanged(object sender, PointerRoutedEventArgs e)
@@ -221,8 +366,11 @@ namespace Notepads.Controls.TextEditor
             if (_contentScrollViewer == null) return;
 
             var delta = e.GetCurrentPoint((UIElement)sender).Properties.MouseWheelDelta;
-            var step = GetSingleLineHeight() * 3 * delta / 120.0;
-            _contentScrollViewer.ChangeView(null, _contentScrollViewer.VerticalOffset - step, null, false);
+            if (!TryHandleWheelForPastEnd(delta))
+            {
+                var step = GetSingleLineHeight() * 3 * delta / 120.0;
+                ScrollToEffectiveOffset(GetEffectiveVerticalOffset() - step);
+            }
             e.Handled = true;
         }
 
@@ -236,25 +384,26 @@ namespace Notepads.Controls.TextEditor
             var controlHeight = _minimapCanvas?.ActualHeight ?? 0;
 
             var lineHeight = GetSingleLineHeight();
-            var textHeight = Math.Max(1, sv.ExtentHeight - GetScrollPastEndSpace());
+            var textHeight = Math.Max(1, sv.ExtentHeight);
 
             // No wrap: exact line mapping. Wrap: proportional mapping (logical lines vs. visual height).
             var scale = (TextWrapping == TextWrapping.NoWrap || lineCount <= 0)
                 ? MinimapLineHeight / Math.Max(1, lineHeight)
                 : (MinimapLineHeight * lineCount) / textHeight;
 
-            var totalMinimapHeight = sv.ExtentHeight * scale;
+            var totalMinimapHeight = GetEffectiveExtentHeight() * scale;
             var boxHeight = sv.ViewportHeight * scale;
-            var scrollable = Math.Max(0, sv.ScrollableHeight);
+            var scrollable = GetEffectiveScrollableHeight();
+            var verticalOffset = GetEffectiveVerticalOffset();
             var fits = totalMinimapHeight <= controlHeight || scrollable <= 0;
 
-            var offset = fits ? 0 : (sv.VerticalOffset / scrollable) * (totalMinimapHeight - controlHeight);
+            var offset = fits ? 0 : (verticalOffset / scrollable) * (totalMinimapHeight - controlHeight);
 
             return new MinimapGeometry
             {
                 Scale = scale,
                 Offset = offset,
-                BoxTop = sv.VerticalOffset * scale - offset,
+                BoxTop = verticalOffset * scale - offset,
                 BoxHeight = boxHeight,
                 ContentFits = fits,
                 ControlHeight = controlHeight,
@@ -266,12 +415,12 @@ namespace Notepads.Controls.TextEditor
         {
             var free = g.ControlHeight - g.BoxHeight;
             if (g.ContentFits || free <= 1) return 1 / Math.Max(0.0001, g.Scale);
-            return _contentScrollViewer.ScrollableHeight / free;
+            return GetEffectiveScrollableHeight() / free;
         }
 
         private double ClampVerticalOffset(double offset)
         {
-            return Math.Min(Math.Max(0, offset), Math.Max(0, _contentScrollViewer.ScrollableHeight));
+            return Math.Min(Math.Max(0, offset), GetEffectiveScrollableHeight());
         }
 
         private void OnMinimapDraw(CanvasControl sender, CanvasDrawEventArgs args)
@@ -281,6 +430,9 @@ namespace Notepads.Controls.TextEditor
             var width = sender.ActualWidth;
             var height = sender.ActualHeight;
             if (width <= 0 || height <= 0) return;
+
+            // Like requested: show the minimap only when the text is taller than the window
+            if (_contentScrollViewer.ScrollableHeight <= 0.5) return;
 
             var lines = GetDocumentLinesCache();
             var lineCount = Math.Max(1, lines.Length - 1);
@@ -312,7 +464,7 @@ namespace Notepads.Controls.TextEditor
             // Rows in minimap space. Same mapping as the viewport box so they line up.
             var rowHeight = TextWrapping == TextWrapping.NoWrap
                 ? MinimapLineHeight
-                : g.Scale * Math.Max(1, _contentScrollViewer.ExtentHeight - GetScrollPastEndSpace()) / lineCount;
+                : g.Scale * Math.Max(1, _contentScrollViewer.ExtentHeight) / lineCount;
             var topPadding = Padding.Top * g.Scale;
 
             var first = Math.Max(0, (int)Math.Floor((g.Offset - topPadding) / rowHeight) - 1);
@@ -358,6 +510,7 @@ namespace Notepads.Controls.TextEditor
         private void OnMinimapPointerPressed(object sender, PointerRoutedEventArgs e)
         {
             if (_contentScrollViewer == null || _minimapCanvas == null) return;
+            if (_contentScrollViewer.ScrollableHeight <= 0.5) return; // minimap hidden
 
             var point = e.GetCurrentPoint(_minimapCanvas);
             if (!point.Properties.IsLeftButtonPressed) return;
@@ -373,12 +526,12 @@ namespace Notepads.Controls.TextEditor
                     ? (y + g.Offset) / Math.Max(0.0001, g.Scale) - _contentScrollViewer.ViewportHeight / 2
                     : (y - g.BoxHeight / 2) * GetOffsetPerMinimapPixel(g);
                 target = ClampVerticalOffset(target);
-                _contentScrollViewer.ChangeView(null, target, null, true);
+                ScrollToEffectiveOffset(target);
                 _minimapDragStartVerticalOffset = target;
             }
             else
             {
-                _minimapDragStartVerticalOffset = _contentScrollViewer.VerticalOffset;
+                _minimapDragStartVerticalOffset = GetEffectiveVerticalOffset();
             }
 
             _minimapDragStartPointerY = y;
@@ -397,7 +550,7 @@ namespace Notepads.Controls.TextEditor
             var dy = e.GetCurrentPoint(_minimapCanvas).Position.Y - _minimapDragStartPointerY;
             var target = ClampVerticalOffset(_minimapDragStartVerticalOffset + dy * GetOffsetPerMinimapPixel(g));
 
-            _contentScrollViewer.ChangeView(null, target, null, true);
+            ScrollToEffectiveOffset(target);
             e.Handled = true;
         }
 

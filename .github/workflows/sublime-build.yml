@@ -14,6 +14,15 @@ jobs:
       - name: Setup MSBuild
         uses: microsoft/setup-msbuild@v2
 
+      - name: Set package version (1.6.<run number>.0)
+        shell: pwsh
+        run: |
+          $ver = "1.6.${{ github.run_number }}.0"
+          $m = "src\Notepads\Package.appxmanifest"
+          (Get-Content $m -Raw) -replace 'Version="1\.5\.6\.0"', "Version=""$ver""" | Set-Content $m -NoNewline -Encoding utf8
+          Select-String -Path $m -Pattern '<Identity'
+          "APP_VERSION=$ver" >> $env:GITHUB_ENV
+
       - name: Create self-signed test certificate
         shell: pwsh
         run: |
@@ -32,12 +41,12 @@ jobs:
           msbuild src\Notepads.sln /t:Restore
           nuget restore src\Notepads.sln
 
-      - name: Build x64 Release package
+      - name: Build x64 Production package (no DEV icons)
         shell: pwsh
         run: |
           msbuild src\Notepads.sln `
             /p:Platform=x64 `
-            /p:Configuration=Release `
+            /p:Configuration=Production `
             /p:UapAppxPackageBuildMode=SideloadOnly `
             /p:AppxBundle=Never `
             /p:AppxPackageSigningEnabled=true `
@@ -68,7 +77,7 @@ jobs:
           if (-not (Test-Path $iscc)) {
             choco install innosetup -y --no-progress
           }
-          & $iscc build\installer\NotepadsSublime.iss
+          & $iscc "/DMyVersion=$env:APP_VERSION" build\installer\NotepadsSublime.iss
           if ($LASTEXITCODE -ne 0) { throw "ISCC failed" }
 
       - name: Upload Setup.exe

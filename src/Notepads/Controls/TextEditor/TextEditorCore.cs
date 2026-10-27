@@ -40,6 +40,7 @@ namespace Notepads.Controls.TextEditor
         public event EventHandler<ScrollViewerViewChangingEventArgs> ScrollViewerViewChanging;
 
         private const char RichEditBoxDefaultLineEnding = '\r';
+        private const double EditorLineHeightFactor = 1.2; // line height relative to font size (Sublime-like)
         private const char RegexDefaultLineEnding = '\n';
 
         private bool _isDocumentLinesCachePendingUpdate = true;
@@ -391,7 +392,7 @@ namespace Notepads.Controls.TextEditor
         private void OnTextChanged(object sender, RoutedEventArgs _)
         {
             UpdateLineNumbersRendering();
-            RefreshSublimeLikeFeatures();
+            RefreshSublimeLikeFeatures(updateScrollPastEnd: true);
         }
 
         private void OnSelectionChanging(RichEditBox sender, RichEditBoxSelectionChangingEventArgs args)
@@ -454,6 +455,7 @@ namespace Notepads.Controls.TextEditor
         private void OnSelectionChanged(object sender, RoutedEventArgs _)
         {
             UpdateLineHighlighterAndIndicator();
+            EnsureCaretVisibleWithPastEnd();
         }
 
         private void OnVerticalScrollBarValueChanged(object sender, RangeBaseValueChangedEventArgs _)
@@ -752,7 +754,9 @@ namespace Notepads.Controls.TextEditor
         {
             Document.DefaultTabStop = (float)FontUtility.GetTextSize(font, fontSize, "text").Width;
             var format = Document.GetDefaultParagraphFormat();
-            format.SetLineSpacing(LineSpacingRule.Exactly, (float)fontSize);
+            // Line spacing is given in points (1pt = 4/3 DIP). Upstream used fontSize pt (~1.33x line height);
+            // Sublime Text uses roughly 1.2x the font size.
+            format.SetLineSpacing(LineSpacingRule.Exactly, (float)(fontSize * 0.75 * EditorLineHeightFactor));
             Document.SetDefaultParagraphFormat(format);
         }
 

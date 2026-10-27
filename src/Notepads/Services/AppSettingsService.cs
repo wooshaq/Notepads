@@ -550,7 +550,7 @@ namespace Notepads.Services
             }
             else
             {
-                _editorFontSize = 14;
+                _editorFontSize = 11; // Sublime Text default (Consolas 10pt)
             }
 
             if (ApplicationSettingsStore.Read(SettingsKey.EditorFontStyleStr) is string fontStyleStr &&
