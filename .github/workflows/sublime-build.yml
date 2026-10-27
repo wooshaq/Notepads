@@ -1,0 +1,56 @@
+name: Build sideload package (Sublime features)
+
+on:
+  push:
+    branches: [ sublime-features ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Create self-signed test certificate
+        shell: pwsh
+        run: |
+          $cert = New-SelfSignedCertificate -Type Custom -Subject "CN=wooshaq" `
+            -KeyUsage DigitalSignature -FriendlyName "Notepads Sublime (test)" `
+            -CertStoreLocation "Cert:\CurrentUser\My" `
+            -TextExtension @("2.5.29.37={text}1.3.6.1.5.5.7.3.3", "2.5.29.19={text}")
+          $pwd = ConvertTo-SecureString -String "notepads" -Force -AsPlainText
+          Export-PfxCertificate -Cert $cert -FilePath "$env:GITHUB_WORKSPACE\cert.pfx" -Password $pwd | Out-Null
+          New-Item -ItemType Directory -Force -Path "$env:GITHUB_WORKSPACE\Artifacts" | Out-Null
+          Export-Certificate -Cert $cert -FilePath "$env:GITHUB_WORKSPACE\Artifacts\Notepads-Sublime-certyfikat.cer" | Out-Null
+
+      - name: Restore
+        shell: pwsh
+        run: |
+          msbuild src\Notepads.sln /t:Restore
+          nuget restore src\Notepads.sln
+
+      - name: Build x64 Release package
+        shell: pwsh
+        run: |
+          msbuild src\Notepads.sln `
+            /p:Platform=x64 `
+            /p:Configuration=Release `
+            /p:UapAppxPackageBuildMode=SideloadOnly `
+            /p:AppxBundle=Never `
+            /p:AppxPackageSigningEnabled=true `
+            /p:PackageCertificateKeyFile=$env:CERT_FILE `
+            /p:PackageCertificatePassword=notepads `
+            /p:AppxPackageDir=$env:ARTIFACTS_DIR `
+            /v:minimal
+        env:
+          CERT_FILE: ${{ github.workspace }}\cert.pfx
+          ARTIFACTS_DIR: ${{ github.workspace }}\Artifacts\
+
+      - name: Upload package
+        uses: actions/upload-artifact@v4
+        with:
+          name: Notepads-Sublime-x64
+          path: Artifacts

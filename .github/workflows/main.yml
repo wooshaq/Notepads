@@ -1,37 +1,8 @@
 name: Notepads CI/CD Pipeline
 
+# Upstream CI disabled in this personal fork (see sublime-build.yml)
 on:
-  push:
-    #paths-ignore:
-    #- '**.md'
-    #- 'ScreenShots/**'
-    #- '.whitesource'
-    #- 'azure-pipelines.yml'
-    #- '.github/**'
-    #- '!.github/workflows/main.yml'
-    branches-ignore:
-    # PRs made by bots trigger both 'push' and 'pull_request' event, ignore 'push' event in that case
-    - 'dependabot**'
-    - 'imgbot**'
-    tags-ignore:
-    - '**'
-  pull_request:
-    paths-ignore:
-    - '**.md'
-    - 'ScreenShots/**'
-    - '.whitesource'
-    - 'azure-pipelines.yml'
-    - '.github/**'
-    - '!.github/workflows/main.yml'
   workflow_dispatch:
-    inputs:
-      param:
-        description: Optional parameter for additional actions
-        # Type '(major|maj) (realease|rel)' or '(minor|min) (realease|rel)' or release for major,miner,patch release respectively
-        # Or explicitly provide version number to create release with that version
-        required: false
-  schedule:
-    - cron: '0 8 * * *'
 
 jobs:
   setup:
