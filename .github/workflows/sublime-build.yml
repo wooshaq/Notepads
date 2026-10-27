@@ -5,6 +5,9 @@ on:
     branches: [ sublime-features ]
   workflow_dispatch:
 
+permissions:
+  contents: write   # needed to publish GitHub Releases
+
 jobs:
   build:
     runs-on: windows-2022
@@ -91,3 +94,31 @@ jobs:
         with:
           name: Notepads-Sublime-x64-msix
           path: Artifacts
+
+      - name: Collect release files
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path release | Out-Null
+          Copy-Item Artifacts\Notepads-Sublime-Setup.exe "release\Notepads-Sublime-Setup-$env:APP_VERSION.exe"
+          Copy-Item pkg\Notepads.msix "release\Notepads-Sublime-$env:APP_VERSION-x64.msix"
+          Copy-Item pkg\Notepads-Sublime.cer release\Notepads-Sublime-certyfikat.cer
+          Compress-Archive -Path pkg\Dependencies\* -DestinationPath release\Dependencies-x64.zip
+          Get-ChildItem release
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ env.APP_VERSION }}
+          target_commitish: ${{ github.sha }}
+          name: Notepads Sublime ${{ env.APP_VERSION }}
+          body: |
+            Prywatny build Notepads z minimapą, stałym paskiem przewijania i przewijaniem za koniec pliku.
+
+            **Instalacja przez Setup.exe:** uruchom `Notepads-Sublime-Setup-*.exe`. Niektóre antywirusy mogą go flagować heurystycznie, bo jest niepodpisanym instalatorem.
+
+            **Instalacja bez exe:**
+            1. Dwuklik na `Notepads-Sublime-certyfikat.cer`, wybierz „Zainstaluj certyfikat”, potem „Komputer lokalny” i magazyn „Zaufane osoby”.
+            2. Dwuklik na `Notepads-Sublime-*-x64.msix` i „Zainstaluj”. Jeśli instalator zgłosi brak zależności, rozpakuj `Dependencies-x64.zip` i najpierw zainstaluj zawarte w nim pliki `.appx`.
+
+            Zbudowane z commita ${{ github.sha }}.
+          files: release/*
