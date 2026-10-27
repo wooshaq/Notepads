@@ -51,7 +51,7 @@ namespace Notepads.Controls.TextEditor
             {
                 _lineHighlighter.Height = height;
                 _lineHighlighter.Margin = new Thickness(0, selectionRect.Y + Padding.Top, 0, 0);
-                _lineHighlighter.Width = Math.Clamp(_rootGrid.ActualWidth, 0, Double.PositiveInfinity);
+                _lineHighlighter.Width = Math.Clamp(_rootGrid.ActualWidth - GetRightSidePanelsWidth(), 0, Double.PositiveInfinity);
 
                 _lineHighlighter.Visibility = Visibility.Visible;
                 _lineIndicator.Visibility = Visibility.Collapsed;

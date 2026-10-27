@@ -1,21 +1,115 @@
 ﻿<ResourceDictionary
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" 
-    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:win2d="using:Microsoft.Graphics.Canvas.UI.Xaml">
 
     <ResourceDictionary.ThemeDictionaries>
         <ResourceDictionary x:Key="Light">
             <SolidColorBrush x:Key="TextEditorForeground"
                              Color="Black"/>
+            <SolidColorBrush x:Key="EditorScrollBarTrackBrush" Color="#08000000"/>
+            <SolidColorBrush x:Key="EditorScrollBarThumbBrush" Color="#40000000"/>
+            <SolidColorBrush x:Key="EditorScrollBarThumbPointerOverBrush" Color="#66000000"/>
+            <SolidColorBrush x:Key="EditorScrollBarThumbPressedBrush" Color="#88000000"/>
         </ResourceDictionary>
         <ResourceDictionary x:Key="Dark">
             <SolidColorBrush x:Key="TextEditorForeground"
                              Color="#F0F0F0"/>
+            <SolidColorBrush x:Key="EditorScrollBarTrackBrush" Color="#08FFFFFF"/>
+            <SolidColorBrush x:Key="EditorScrollBarThumbBrush" Color="#40FFFFFF"/>
+            <SolidColorBrush x:Key="EditorScrollBarThumbPointerOverBrush" Color="#66FFFFFF"/>
+            <SolidColorBrush x:Key="EditorScrollBarThumbPressedBrush" Color="#88FFFFFF"/>
         </ResourceDictionary>
         <ResourceDictionary x:Key="HighContrast">
             <SolidColorBrush x:Key="TextEditorForeground"
                              Color="{ThemeResource TextControlForeground}"/>
+            <SolidColorBrush x:Key="EditorScrollBarTrackBrush" Color="Transparent"/>
+            <SolidColorBrush x:Key="EditorScrollBarThumbBrush" Color="{ThemeResource SystemColorButtonTextColor}"/>
+            <SolidColorBrush x:Key="EditorScrollBarThumbPointerOverBrush" Color="{ThemeResource SystemColorHighlightColor}"/>
+            <SolidColorBrush x:Key="EditorScrollBarThumbPressedBrush" Color="{ThemeResource SystemColorHighlightColor}"/>
         </ResourceDictionary>
     </ResourceDictionary.ThemeDictionaries>
+
+    <!-- Always-visible, Sublime-like vertical scroll bar (never auto-hides) -->
+    <ControlTemplate x:Key="EditorScrollBarTrackButtonTemplate" TargetType="RepeatButton">
+        <Grid Background="Transparent"/>
+    </ControlTemplate>
+
+    <Style x:Key="EditorScrollBarThumbStyle" TargetType="Thumb">
+        <Setter Property="IsTabStop" Value="False"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Thumb">
+                    <Grid Background="Transparent">
+                        <VisualStateManager.VisualStateGroups>
+                            <VisualStateGroup x:Name="CommonStates">
+                                <VisualState x:Name="Normal"/>
+                                <VisualState x:Name="PointerOver">
+                                    <VisualState.Setters>
+                                        <Setter Target="ThumbBorder.Background" Value="{ThemeResource EditorScrollBarThumbPointerOverBrush}"/>
+                                    </VisualState.Setters>
+                                </VisualState>
+                                <VisualState x:Name="Pressed">
+                                    <VisualState.Setters>
+                                        <Setter Target="ThumbBorder.Background" Value="{ThemeResource EditorScrollBarThumbPressedBrush}"/>
+                                    </VisualState.Setters>
+                                </VisualState>
+                                <VisualState x:Name="Disabled">
+                                    <VisualState.Setters>
+                                        <Setter Target="ThumbBorder.Opacity" Value="0"/>
+                                    </VisualState.Setters>
+                                </VisualState>
+                            </VisualStateGroup>
+                        </VisualStateManager.VisualStateGroups>
+                        <Border x:Name="ThumbBorder"
+                                Margin="3,1,3,1"
+                                CornerRadius="3"
+                                Background="{ThemeResource EditorScrollBarThumbBrush}"/>
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="EditorAlwaysVisibleScrollBarStyle" TargetType="ScrollBar">
+        <Setter Property="IsTabStop" Value="False"/>
+        <Setter Property="Width" Value="12"/>
+        <Setter Property="Orientation" Value="Vertical"/>
+        <Setter Property="IndicatorMode" Value="MouseIndicator"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ScrollBar">
+                    <Grid x:Name="Root" Background="{ThemeResource EditorScrollBarTrackBrush}">
+                        <Grid x:Name="VerticalRoot">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+                            <RepeatButton x:Name="VerticalLargeDecrease"
+                                          Grid.Row="0"
+                                          IsTabStop="False"
+                                          Interval="50"
+                                          HorizontalAlignment="Stretch"
+                                          Template="{StaticResource EditorScrollBarTrackButtonTemplate}"/>
+                            <Thumb x:Name="VerticalThumb"
+                                   Grid.Row="1"
+                                   MinHeight="24"
+                                   HorizontalAlignment="Stretch"
+                                   Style="{StaticResource EditorScrollBarThumbStyle}"/>
+                            <RepeatButton x:Name="VerticalLargeIncrease"
+                                          Grid.Row="2"
+                                          IsTabStop="False"
+                                          Interval="50"
+                                          HorizontalAlignment="Stretch"
+                                          VerticalAlignment="Stretch"
+                                          Template="{StaticResource EditorScrollBarTrackButtonTemplate}"/>
+                        </Grid>
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
 
     <Style x:Key="TextEditorCore" TargetType="RichEditBox">
         <Setter Property="Foreground" Value="{ThemeResource TextEditorForeground}"/>
@@ -30,7 +124,7 @@
         <Setter Property="ScrollViewer.HorizontalScrollMode" Value="Enabled"/>
         <Setter Property="ScrollViewer.VerticalScrollMode" Value="Enabled"/>
         <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Auto"/>
-        <Setter Property="ScrollViewer.VerticalScrollBarVisibility" Value="Auto"/>
+        <Setter Property="ScrollViewer.VerticalScrollBarVisibility" Value="Hidden"/>
         <Setter Property="ScrollViewer.IsDeferredScrollingEnabled" Value="False"/>
         <Setter Property="TextWrapping" Value="NoWrap"/>
         <Setter Property="Padding" Value="0"/>
@@ -80,6 +174,8 @@
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition x:Name="LineNumberColumnDefinition" Width="Auto"/>
                                 <ColumnDefinition x:Name="TextEditorColumnDefinition" Width="*"/>
+                                <ColumnDefinition x:Name="MinimapColumnDefinition" Width="Auto"/>
+                                <ColumnDefinition x:Name="EditorScrollBarColumnDefinition" Width="Auto"/>
                             </Grid.ColumnDefinitions>
                             <Canvas x:Name="LineHighlighterAndIndicatorCanvas" Grid.ColumnSpan="2">
                                 <Border x:Name="LineIndicator"
@@ -113,6 +209,15 @@
                                 VerticalScrollBarVisibility="{TemplateBinding ScrollViewer.VerticalScrollBarVisibility}"
                                 ZoomMode="Disabled"/>
                             </Grid>
+                            <win2d:CanvasControl x:Name="MinimapCanvas"
+                                                 Grid.Column="2"
+                                                 Width="110"
+                                                 ClearColor="Transparent"
+                                                 VerticalAlignment="Stretch"/>
+                            <ScrollBar x:Name="EditorVerticalScrollBar"
+                                       Grid.Column="3"
+                                       VerticalAlignment="Stretch"
+                                       Style="{StaticResource EditorAlwaysVisibleScrollBarStyle}"/>
                         </Grid>
                         <TextBlock 
                             x:Name="PlaceholderTextContentPresenter"

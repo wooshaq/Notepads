@@ -187,6 +187,8 @@ namespace Notepads.Controls.TextEditor
             _rootGrid.SizeChanged += OnRootGridSizeChanged;
 
             Microsoft.Toolkit.Uwp.UI.ScrollViewerExtensions.SetEnableMiddleClickScrolling(_contentScrollViewer, true);
+
+            InitializeSublimeLikeFeatures();
         }
 
         // Unhook events and clear state
@@ -232,6 +234,8 @@ namespace Notepads.Controls.TextEditor
             TextWrappingChanged -= OnTextWrappingChanged;
             SizeChanged -= OnSizeChanged;
             FontSizeChanged -= OnFontSizeChanged;
+
+            DisposeSublimeLikeFeatures();
 
             UnhookExternalEvents();
 
@@ -326,6 +330,8 @@ namespace Notepads.Controls.TextEditor
 
             UpdateLineHighlighterAndIndicator();
             if (DisplayLineNumbers) ShowLineNumbers();
+
+            RefreshSublimeLikeFeatures(updateScrollPastEnd: true);
         }
 
         private void OnLostFocus(object sender, RoutedEventArgs _)
@@ -385,6 +391,7 @@ namespace Notepads.Controls.TextEditor
         private void OnTextChanged(object sender, RoutedEventArgs _)
         {
             UpdateLineNumbersRendering();
+            RefreshSublimeLikeFeatures();
         }
 
         private void OnSelectionChanging(RichEditBox sender, RichEditBoxSelectionChangingEventArgs args)
@@ -415,16 +422,20 @@ namespace Notepads.Controls.TextEditor
             {
                 UpdateLineNumbersRendering();
             }
+
+            RefreshSublimeLikeFeatures();
         }
 
         private void OnContentScrollViewerSizeChanged(object sender, SizeChangedEventArgs _)
         {
             UpdateLineNumbersRendering();
+            RefreshSublimeLikeFeatures(updateScrollPastEnd: true);
         }
 
         private void OnFontSizeChanged(object sender, double _)
         {
             UpdateLineHighlighterAndIndicator();
+            RefreshSublimeLikeFeatures(updateScrollPastEnd: true);
         }
 
         private void OnSizeChanged(object sender, SizeChangedEventArgs _)
@@ -437,6 +448,7 @@ namespace Notepads.Controls.TextEditor
             UpdateLayout();
             UpdateLineHighlighterAndIndicator();
             UpdateLineNumbersRendering();
+            RefreshSublimeLikeFeatures();
         }
 
         private void OnSelectionChanged(object sender, RoutedEventArgs _)
