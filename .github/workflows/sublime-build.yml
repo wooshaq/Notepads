@@ -49,8 +49,36 @@ jobs:
           CERT_FILE: ${{ github.workspace }}\cert.pfx
           ARTIFACTS_DIR: ${{ github.workspace }}\Artifacts\
 
-      - name: Upload package
+      - name: Prepare files for Setup.exe
+        shell: pwsh
+        run: |
+          $msix = Get-ChildItem -Path Artifacts -Recurse -Filter *.msix | Select-Object -First 1
+          if (-not $msix) { throw "No .msix produced" }
+          New-Item -ItemType Directory -Force -Path pkg\Dependencies | Out-Null
+          Copy-Item $msix.FullName pkg\Notepads.msix
+          Copy-Item Artifacts\Notepads-Sublime-certyfikat.cer pkg\Notepads-Sublime.cer
+          $deps = Join-Path $msix.DirectoryName "Dependencies\x64"
+          if (Test-Path $deps) { Copy-Item "$deps\*.appx" pkg\Dependencies }
+          Get-ChildItem -Recurse pkg | Select-Object FullName
+
+      - name: Build Setup.exe (Inno Setup)
+        shell: pwsh
+        run: |
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) {
+            choco install innosetup -y --no-progress
+          }
+          & $iscc build\installer\NotepadsSublime.iss
+          if ($LASTEXITCODE -ne 0) { throw "ISCC failed" }
+
+      - name: Upload Setup.exe
         uses: actions/upload-artifact@v4
         with:
-          name: Notepads-Sublime-x64
+          name: Notepads-Sublime-Setup
+          path: Artifacts/Notepads-Sublime-Setup.exe
+
+      - name: Upload raw MSIX package
+        uses: actions/upload-artifact@v4
+        with:
+          name: Notepads-Sublime-x64-msix
           path: Artifacts
