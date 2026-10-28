@@ -424,6 +424,7 @@ namespace Notepads.Controls.TextEditor
                 UpdateLineNumbersRendering();
             }
 
+            NormalizePastEndAfterScroll();
             RefreshSublimeLikeFeatures();
         }
 

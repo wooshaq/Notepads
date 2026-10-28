@@ -237,6 +237,45 @@ namespace Notepads.Controls.TextEditor
             SetPastEndOffset(_pastEndOffset);
         }
 
+        private bool _normalizingPastEnd;
+
+        /// <summary>
+        /// The virtual past-end space only works while the real ScrollViewer sits at its bottom:
+        /// the text is moved up by _pastEndOffset, and the RichEditBox draws nothing below its own
+        /// viewport. Windows can scroll the ScrollViewer itself (smooth wheel, touchpad, scroll bar
+        /// of the RichEditBox) while the text is still moved up, which leaves an empty band at the
+        /// bottom with the text cut off above it. Fold the virtual space back so the same lines stay
+        /// on screen: scrolling back up uses up the virtual space first, then scrolls the text.
+        /// </summary>
+        private void NormalizePastEndAfterScroll()
+        {
+            if (!ScrollPastEndEnabled || _normalizingPastEnd || _pastEndOffset <= 0 || _contentScrollViewer == null) return;
+
+            var sv = _contentScrollViewer;
+            var scrollable = Math.Max(0, sv.ScrollableHeight);
+            if (sv.VerticalOffset >= scrollable - 0.5) return;
+
+            var effective = sv.VerticalOffset + _pastEndOffset;
+            _normalizingPastEnd = true;
+            try
+            {
+                if (effective <= scrollable)
+                {
+                    SetPastEndOffset(0);
+                    sv.ChangeView(null, effective, null, true);
+                }
+                else
+                {
+                    sv.ChangeView(null, scrollable, null, true);
+                    SetPastEndOffset(effective - scrollable);
+                }
+            }
+            finally
+            {
+                _normalizingPastEnd = false;
+            }
+        }
+
         private void EnsureCaretVisibleWithPastEnd()
         {
             if (!ScrollPastEndEnabled || _pastEndOffset <= 0 || _contentScrollViewer == null) return;
