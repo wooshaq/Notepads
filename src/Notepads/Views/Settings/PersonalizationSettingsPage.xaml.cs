@@ -45,6 +45,11 @@ namespace Notepads.Views.Settings
             BackgroundTintOpacitySlider.Value = ThemeSettingsService.AppBackgroundPanelTintOpacity * 100;
             AccentColorPicker.Color = ThemeSettingsService.AppAccentColor;
 
+            WindowTintToggle.IsOn = ThemeSettingsService.UseWindowTint;
+            WindowTintColorPicker.Color = ThemeSettingsService.WindowTintColor;
+            WindowTintStrengthSlider.Value = ThemeSettingsService.WindowTintStrength * 100;
+            WindowTintColorPicker.IsEnabled = WindowTintStrengthSlider.IsEnabled = WindowTintToggle.IsOn;
+
             if (App.IsGameBarWidget)
             {
                 // Game Bar widgets do not support transparency, disable this setting
@@ -81,6 +86,9 @@ namespace Notepads.Views.Settings
             AccentColorToggle.Toggled += WindowsAccentColorToggle_OnToggled;
             AccentColorPicker.ColorChanged += AccentColorPicker_OnColorChanged;
             ThemeSettingsService.OnAccentColorChanged += ThemeSettingsService_OnAccentColorChanged;
+            WindowTintToggle.Toggled += WindowTintToggle_OnToggled;
+            WindowTintColorPicker.ColorChanged += WindowTintColorPicker_OnColorChanged;
+            WindowTintStrengthSlider.ValueChanged += WindowTintStrengthSlider_OnValueChanged;
             if (!App.IsGameBarWidget)
             {
                 UISettings.AdvancedEffectsEnabledChanged += UISettings_AdvancedEffectsEnabledChanged;
@@ -97,6 +105,9 @@ namespace Notepads.Views.Settings
             AccentColorToggle.Toggled -= WindowsAccentColorToggle_OnToggled;
             AccentColorPicker.ColorChanged -= AccentColorPicker_OnColorChanged;
             ThemeSettingsService.OnAccentColorChanged -= ThemeSettingsService_OnAccentColorChanged;
+            WindowTintToggle.Toggled -= WindowTintToggle_OnToggled;
+            WindowTintColorPicker.ColorChanged -= WindowTintColorPicker_OnColorChanged;
+            WindowTintStrengthSlider.ValueChanged -= WindowTintStrengthSlider_OnValueChanged;
             if (!App.IsGameBarWidget)
             {
                 UISettings.AdvancedEffectsEnabledChanged -= UISettings_AdvancedEffectsEnabledChanged;
@@ -155,6 +166,22 @@ namespace Notepads.Views.Settings
         private void BackgroundTintOpacitySlider_OnValueChanged(object sender, RangeBaseValueChangedEventArgs e)
         {
             ThemeSettingsService.AppBackgroundPanelTintOpacity = e.NewValue / 100;
+        }
+
+        private void WindowTintToggle_OnToggled(object sender, RoutedEventArgs e)
+        {
+            WindowTintColorPicker.IsEnabled = WindowTintStrengthSlider.IsEnabled = WindowTintToggle.IsOn;
+            ThemeSettingsService.UseWindowTint = WindowTintToggle.IsOn;
+        }
+
+        private void WindowTintColorPicker_OnColorChanged(ColorPicker sender, ColorChangedEventArgs args)
+        {
+            ThemeSettingsService.WindowTintColor = args.NewColor;
+        }
+
+        private void WindowTintStrengthSlider_OnValueChanged(object sender, RangeBaseValueChangedEventArgs e)
+        {
+            ThemeSettingsService.WindowTintStrength = e.NewValue / 100;
         }
 
         private void WindowsAccentColorToggle_OnToggled(object sender, RoutedEventArgs e)

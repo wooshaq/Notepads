@@ -20,6 +20,9 @@ namespace Notepads.Settings
         internal static string AppBackgroundTintOpacityDouble = "AppBackgroundTintOpacityDouble";
         internal static string AppAccentColorHexStr = "AppAccentColorHexStr";
         internal static string CustomAccentColorHexStr = "CustomAccentColorHexStr";
+        internal static string UseWindowTintBool = "UseWindowTintBool";
+        internal static string WindowTintColorHexStr = "WindowTintColorHexStr";
+        internal static string WindowTintStrengthDouble = "WindowTintStrengthDouble";
         internal static string UseWindowsAccentColorBool = "UseWindowsAccentColorBool";
 
         // Editor related

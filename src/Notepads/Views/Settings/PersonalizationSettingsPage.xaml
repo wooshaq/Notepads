@@ -60,6 +60,42 @@
                     <TextBlock x:Uid="/Settings/PersonalizationPage_BackgroundTintOpacitySettings_Description" Style="{ThemeResource DescriptionTextBlockStyle}" Margin="0,8,0,0"/>
                 </StackPanel>
                 <TextBlock
+                    x:Uid="/Settings/PersonalizationPage_WindowTintSettings_Title"
+                    Style="{StaticResource CompactSubtitleTextBlockStyle}"
+                    Margin="0,20,0,0"
+                    FontWeight="Normal"/>
+                <StackPanel Margin="0,10,0,0">
+                    <ToggleSwitch x:Uid="/Settings/PersonalizationPage_WindowTintSettings_UseWindowTintToggleSwitch" Style="{StaticResource CustomToggleSwitchStyle}" x:Name="WindowTintToggle" Margin="0,0,0,8"/>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                        <TextBlock x:Uid="/Settings/PersonalizationPage_WindowTintSettings_Strength" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                        <Slider Style="{StaticResource CustomSliderStyle}"
+                                x:Name="WindowTintStrengthSlider"
+                                Minimum="0" Maximum="100"
+                                StepFrequency="1"
+                                Margin="0,0,10,0"
+                                Width="160"/>
+                        <TextBlock Text="{x:Bind WindowTintStrengthSlider.Value, Mode=OneWay}"
+                                   VerticalAlignment="Center"
+                                   FontSize="18"/>
+                        <TextBlock Text="%"
+                                   VerticalAlignment="Center"
+                                   FontSize="18"/>
+                    </StackPanel>
+                    <Viewbox MaxWidth="300" Stretch="Fill">
+                        <ColorPicker
+                            x:Name="WindowTintColorPicker"
+                            ColorSpectrumShape="Ring"
+                            IsColorSliderVisible="True"
+                            IsColorChannelTextInputVisible="True"
+                            IsHexInputVisible="True"
+                            IsAlphaEnabled="False"
+                            IsAlphaSliderVisible="False"
+                            IsAlphaTextInputVisible="False">
+                        </ColorPicker>
+                    </Viewbox>
+                    <TextBlock x:Uid="/Settings/PersonalizationPage_WindowTintSettings_Description" Style="{ThemeResource DescriptionTextBlockStyle}" Margin="0,8,0,0"/>
+                </StackPanel>
+                <TextBlock
                     x:Uid="/Settings/PersonalizationPage_AccentColorSettings_Title"
                     Style="{StaticResource CompactSubtitleTextBlockStyle}"
                     Margin="0,20,0,0"

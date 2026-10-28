@@ -82,6 +82,64 @@ namespace Notepads.Services
             }
         }
 
+        // Sublime Pad: tint the window background with a colour of choice
+        private static bool _useWindowTint;
+        private static Color _windowTintColor;
+        private static double _windowTintStrength;
+
+        public static bool UseWindowTint
+        {
+            get => _useWindowTint;
+            set
+            {
+                _useWindowTint = value;
+                ApplicationSettingsStore.Write(SettingsKey.UseWindowTintBool, value);
+                OnBackgroundChanged?.Invoke(null, GetAppBackgroundBrush(ThemeMode));
+            }
+        }
+
+        public static Color WindowTintColor
+        {
+            get => _windowTintColor;
+            set
+            {
+                _windowTintColor = value;
+                ApplicationSettingsStore.Write(SettingsKey.WindowTintColorHexStr, value.ToHex());
+                if (_useWindowTint) OnBackgroundChanged?.Invoke(null, GetAppBackgroundBrush(ThemeMode));
+            }
+        }
+
+        /// <summary>How strongly the tint colour is mixed into the background, 0..1.</summary>
+        public static double WindowTintStrength
+        {
+            get => _windowTintStrength;
+            set
+            {
+                _windowTintStrength = Math.Min(1, Math.Max(0, value));
+                ApplicationSettingsStore.Write(SettingsKey.WindowTintStrengthDouble, _windowTintStrength);
+                if (_useWindowTint) OnBackgroundChanged?.Invoke(null, GetAppBackgroundBrush(ThemeMode));
+            }
+        }
+
+        private static void InitializeWindowTint()
+        {
+            _useWindowTint = ApplicationSettingsStore.Read(SettingsKey.UseWindowTintBool) is bool useTint && useTint;
+            _windowTintColor = ApplicationSettingsStore.Read(SettingsKey.WindowTintColorHexStr) is string tintHex
+                ? tintHex.ToColor()
+                : Color.FromArgb(255, 0x2F, 0x6F, 0xD6);
+            _windowTintStrength = ApplicationSettingsStore.Read(SettingsKey.WindowTintStrengthDouble) is double strength
+                ? strength
+                : 0.25;
+        }
+
+        private static Color MixWindowTint(Color baseColor)
+        {
+            if (!_useWindowTint) return baseColor;
+            var t = _windowTintStrength;
+            byte Mix(byte a, byte b) => (byte)Math.Round(a + (b - a) * t);
+            return Color.FromArgb(255, Mix(baseColor.R, _windowTintColor.R), Mix(baseColor.G, _windowTintColor.G), Mix(baseColor.B, _windowTintColor.B));
+        }
+
         private static Color _appAccentColor;
 
         public static Color AppAccentColor
@@ -109,6 +167,8 @@ namespace Notepads.Services
 
         public static void Initialize()
         {
+            InitializeWindowTint();
+
             InitializeThemeMode();
 
             InitializeAppAccentColor();
@@ -274,7 +334,7 @@ namespace Notepads.Services
             var darkModeBaseColor = Color.FromArgb(255, 46, 46, 46);
             var lightModeBaseColor = Color.FromArgb(255, 240, 240, 240);
 
-            var baseColor = theme == ElementTheme.Light ? lightModeBaseColor : darkModeBaseColor;
+            var baseColor = MixWindowTint(theme == ElementTheme.Light ? lightModeBaseColor : darkModeBaseColor);
 
             if (AppBackgroundPanelTintOpacity > 0.99f ||
                 !Windows.Foundation.Metadata.ApiInformation.IsTypePresent("Windows.UI.Xaml.Media.AcrylicBrush") ||

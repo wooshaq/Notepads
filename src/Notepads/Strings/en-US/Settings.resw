@@ -429,4 +429,19 @@
     <value>Exit app when closing last tab</value>
     <comment>AdvancedPage AppLifecyclePreferenceSettings ExitingLastTabClosesWindowToggleSwitch On display text.</comment>
   </data>
+  <data name="PersonalizationPage_WindowTintSettings_Title.Text" xml:space="preserve">
+    <value>Window Color</value>
+  </data>
+  <data name="PersonalizationPage_WindowTintSettings_UseWindowTintToggleSwitch.OnContent" xml:space="preserve">
+    <value>Tint the window background</value>
+  </data>
+  <data name="PersonalizationPage_WindowTintSettings_UseWindowTintToggleSwitch.OffContent" xml:space="preserve">
+    <value>Tint the window background</value>
+  </data>
+  <data name="PersonalizationPage_WindowTintSettings_Strength.Text" xml:space="preserve">
+    <value>Strength</value>
+  </data>
+  <data name="PersonalizationPage_WindowTintSettings_Description.Text" xml:space="preserve">
+    <value>Mixes the chosen color into the gray background of the window, the editor and the minimap.</value>
+  </data>
 </root>
