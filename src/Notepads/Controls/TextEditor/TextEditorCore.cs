@@ -455,6 +455,7 @@ namespace Notepads.Controls.TextEditor
         private void OnSelectionChanged(object sender, RoutedEventArgs _)
         {
             UpdateLineHighlighterAndIndicator();
+            UpdateActiveLineNumberIfNeeded();
             EnsureCaretVisibleWithPastEnd();
         }
 

@@ -51,7 +51,10 @@ namespace Notepads.Controls.TextEditor
             {
                 _lineHighlighter.Height = height;
                 _lineHighlighter.Margin = new Thickness(0, selectionRect.Y + Padding.Top, 0, 0);
-                _lineHighlighter.Width = Math.Clamp(_rootGrid.ActualWidth - GetRightSidePanelsWidth(), 0, Double.PositiveInfinity);
+                // Sublime-like: highlight only the line-number gutter row (current number is also brighter)
+                _lineHighlighter.Width = DisplayLineNumbers
+                    ? Math.Clamp(_lineNumberGrid.ActualWidth, 0, Double.PositiveInfinity)
+                    : Math.Clamp(_rootGrid.ActualWidth - GetRightSidePanelsWidth(), 0, Double.PositiveInfinity);
 
                 _lineHighlighter.Visibility = Visibility.Visible;
                 _lineIndicator.Visibility = Visibility.Collapsed;

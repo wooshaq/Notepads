@@ -44,6 +44,32 @@ namespace Notepads.Controls.TextEditor
         private readonly Dictionary<string, double> _minRequisiteIntegerTextRenderingWidthCache = new Dictionary<string, double>();
         private readonly SolidColorBrush _lineNumberDarkModeForegroundBrush = new SolidColorBrush("#99EEEEEE".ToColor());
         private readonly SolidColorBrush _lineNumberLightModeForegroundBrush = new SolidColorBrush("#99000000".ToColor());
+        private readonly SolidColorBrush _activeLineNumberDarkModeForegroundBrush = new SolidColorBrush("#FFF2F2F2".ToColor());
+        private readonly SolidColorBrush _activeLineNumberLightModeForegroundBrush = new SolidColorBrush("#FF000000".ToColor());
+        private int _lastRenderedCaretLineNumber = -1;
+
+        /// <summary>1-based line number of the caret (selection start).</summary>
+        private int GetCaretLineNumber(string[] lines)
+        {
+            var caret = Document.Selection.StartPosition;
+            var offset = 0;
+            for (int i = 0; i < lines.Length - 1; i++)
+            {
+                var next = offset + lines[i].Length + 1;
+                if (caret < next) return i + 1;
+                offset = next;
+            }
+            return Math.Max(1, lines.Length - 1);
+        }
+
+        private void UpdateActiveLineNumberIfNeeded()
+        {
+            if (!_loaded || !DisplayLineNumbers) return;
+            if (GetCaretLineNumber(GetDocumentLinesCache()) != _lastRenderedCaretLineNumber)
+            {
+                UpdateLineNumbersRendering();
+            }
+        }
 
         private void ShowLineNumbers()
         {
@@ -114,6 +140,7 @@ namespace Notepads.Controls.TextEditor
             var minLineNumberTextRenderingWidth = CalculateMinimumRequisiteIntegerTextRenderingWidth(FontFamily,
                 FontSize, (document.Length - 1).ToString().Length);
 
+            _lastRenderedCaretLineNumber = GetCaretLineNumber(document);
             RenderLineNumbersInternal(lineNumberTextRenderingPositions, minLineNumberTextRenderingWidth);
         }
 
@@ -193,8 +220,13 @@ namespace Notepads.Controls.TextEditor
 
             var numOfReusableLineNumberBlocks = _renderedLineNumberBlocks.Count;
 
+            var activeLineNumberForeground = (ActualTheme == ElementTheme.Dark)
+                ? _activeLineNumberDarkModeForegroundBrush
+                : _activeLineNumberLightModeForegroundBrush;
+
             foreach (var (lineNumber, rect) in lineNumberTextRenderingPositions)
             {
+                var foreground = lineNumber == _lastRenderedCaretLineNumber ? activeLineNumberForeground : lineNumberForeground;
                 var margin = new Thickness(lineNumberPadding.Left,
                     rect.Top + lineNumberPadding.Top + Padding.Top,
                     lineNumberPadding.Right,
@@ -209,7 +241,7 @@ namespace Notepads.Controls.TextEditor
                     _renderedLineNumberBlocks[index].Height = lineNumberTextBlockHeight;
                     _renderedLineNumberBlocks[index].Width = minLineNumberTextRenderingWidth;
                     _renderedLineNumberBlocks[index].Visibility = Visibility.Visible;
-                    _renderedLineNumberBlocks[index].Foreground = lineNumberForeground;
+                    _renderedLineNumberBlocks[index].Foreground = foreground;
 
                     numOfReusableLineNumberBlocks--;
                 }
@@ -225,7 +257,7 @@ namespace Notepads.Controls.TextEditor
                         HorizontalAlignment = HorizontalAlignment.Right,
                         VerticalAlignment = VerticalAlignment.Bottom,
                         HorizontalTextAlignment = TextAlignment.Right,
-                        Foreground = lineNumberForeground
+                        Foreground = foreground
                     };
 
                     _lineNumberCanvas.Children.Add(lineNumberBlock);

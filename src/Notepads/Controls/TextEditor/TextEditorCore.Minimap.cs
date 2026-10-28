@@ -204,6 +204,8 @@ namespace Notepads.Controls.TextEditor
         {
             if (!ScrollPastEndEnabled || _contentScrollViewer == null) return 0;
             var sv = _contentScrollViewer;
+            // Text fits in the window -> nothing to scroll at all (like Sublime)
+            if (sv.ScrollableHeight <= 0.5) return 0;
             // Last line may go up to the very top of the viewport
             var visibleTextPart = sv.ExtentHeight - Math.Max(0, sv.ScrollableHeight);
             return Math.Max(0, visibleTextPart - GetSingleLineHeight());
@@ -391,19 +393,20 @@ namespace Notepads.Controls.TextEditor
                 ? MinimapLineHeight / Math.Max(1, lineHeight)
                 : (MinimapLineHeight * lineCount) / textHeight;
 
-            var totalMinimapHeight = GetEffectiveExtentHeight() * scale;
+            // Minimap itself maps the REAL document; the virtual past-end space only moves the
+            // viewport box further down (it slides out below the minimap, like in Sublime).
+            var totalMinimapHeight = sv.ExtentHeight * scale;
             var boxHeight = sv.ViewportHeight * scale;
-            var scrollable = GetEffectiveScrollableHeight();
-            var verticalOffset = GetEffectiveVerticalOffset();
+            var scrollable = Math.Max(0, sv.ScrollableHeight);
             var fits = totalMinimapHeight <= controlHeight || scrollable <= 0;
 
-            var offset = fits ? 0 : (verticalOffset / scrollable) * (totalMinimapHeight - controlHeight);
+            var offset = fits ? 0 : (Math.Min(sv.VerticalOffset, scrollable) / scrollable) * (totalMinimapHeight - controlHeight);
 
             return new MinimapGeometry
             {
                 Scale = scale,
                 Offset = offset,
-                BoxTop = verticalOffset * scale - offset,
+                BoxTop = (sv.VerticalOffset + _pastEndOffset) * scale - offset,
                 BoxHeight = boxHeight,
                 ContentFits = fits,
                 ControlHeight = controlHeight,
@@ -415,7 +418,7 @@ namespace Notepads.Controls.TextEditor
         {
             var free = g.ControlHeight - g.BoxHeight;
             if (g.ContentFits || free <= 1) return 1 / Math.Max(0.0001, g.Scale);
-            return GetEffectiveScrollableHeight() / free;
+            return Math.Max(0, _contentScrollViewer.ScrollableHeight) / free;
         }
 
         private double ClampVerticalOffset(double offset)
