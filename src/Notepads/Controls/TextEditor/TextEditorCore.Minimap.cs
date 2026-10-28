@@ -336,8 +336,10 @@ namespace Notepads.Controls.TextEditor
         {
             if (!AlwaysVisibleScrollBarEnabled || _editorVerticalScrollBar == null) return;
 
+            // The scroll bar covers the real text only: at the end of the file the thumb is at the
+            // bottom and stays there while scrolling further into the virtual past-end space.
             var sv = _contentScrollViewer;
-            var max = GetEffectiveScrollableHeight();
+            var max = Math.Max(0, sv.ScrollableHeight);
             var lineHeight = GetSingleLineHeight();
 
             _editorVerticalScrollBar.Minimum = 0;
@@ -349,7 +351,7 @@ namespace Notepads.Controls.TextEditor
 
             if (!_isScrollBarThumbDragging)
             {
-                _editorVerticalScrollBar.Value = Math.Min(max, Math.Max(0, GetEffectiveVerticalOffset()));
+                _editorVerticalScrollBar.Value = Math.Min(max, Math.Max(0, sv.VerticalOffset));
             }
         }
 
@@ -385,13 +387,12 @@ namespace Notepads.Controls.TextEditor
             var sv = _contentScrollViewer;
             var controlHeight = _minimapCanvas?.ActualHeight ?? 0;
 
-            var lineHeight = GetSingleLineHeight();
-            var textHeight = Math.Max(1, sv.ExtentHeight);
-
-            // No wrap: exact line mapping. Wrap: proportional mapping (logical lines vs. visual height).
-            var scale = (TextWrapping == TextWrapping.NoWrap || lineCount <= 0)
-                ? MinimapLineHeight / Math.Max(1, lineHeight)
-                : (MinimapLineHeight * lineCount) / textHeight;
+            // Map the real text height onto exactly lineCount minimap rows. Using the nominal single
+            // line height here made the minimap taller than its rows whenever the editor's actual
+            // line height differs (line spacing), so at the end of the file the rows ran out above
+            // the bottom of the minimap and it looked scrolled past its end.
+            var textHeight = Math.Max(1, sv.ExtentHeight - Padding.Top - Padding.Bottom);
+            var scale = (MinimapLineHeight * Math.Max(1, lineCount)) / textHeight;
 
             // Minimap itself maps the REAL document; the virtual past-end space only moves the
             // viewport box further down (it slides out below the minimap, like in Sublime).
@@ -465,9 +466,7 @@ namespace Notepads.Controls.TextEditor
             ds.TextAntialiasing = CanvasTextAntialiasing.Grayscale;
 
             // Rows in minimap space. Same mapping as the viewport box so they line up.
-            var rowHeight = TextWrapping == TextWrapping.NoWrap
-                ? MinimapLineHeight
-                : g.Scale * Math.Max(1, _contentScrollViewer.ExtentHeight) / lineCount;
+            var rowHeight = MinimapLineHeight;
             var topPadding = Padding.Top * g.Scale;
 
             var first = Math.Max(0, (int)Math.Floor((g.Offset - topPadding) / rowHeight) - 1);
