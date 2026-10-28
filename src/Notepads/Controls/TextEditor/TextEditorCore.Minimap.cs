@@ -32,6 +32,7 @@ namespace Notepads.Controls.TextEditor
         private static readonly bool AlwaysVisibleScrollBarEnabled = true;
         private static readonly bool ScrollPastEndEnabled = true;
 
+        private const double ScrollPastEndFraction = 0.5; // how far past the last line, as a part of the window height
         private const double MinimapWidth = 110;        // DIPs
         private const double MinimapLineHeight = 2.5;   // DIPs per document line in minimap (Sublime ~2-3)
         private const float MinimapFontSize = 2.5f;     // glyph size inside the minimap
@@ -206,9 +207,9 @@ namespace Notepads.Controls.TextEditor
             var sv = _contentScrollViewer;
             // Text fits in the window -> nothing to scroll at all (like Sublime)
             if (sv.ScrollableHeight <= 0.5) return 0;
-            // Last line may go up to the very top of the viewport
+            // Last line may go up to the middle of the viewport
             var visibleTextPart = sv.ExtentHeight - Math.Max(0, sv.ScrollableHeight);
-            return Math.Max(0, visibleTextPart - GetSingleLineHeight());
+            return Math.Max(0, visibleTextPart * ScrollPastEndFraction - GetSingleLineHeight() / 2);
         }
 
         private double GetEffectiveVerticalOffset() => _contentScrollViewer.VerticalOffset + _pastEndOffset;
