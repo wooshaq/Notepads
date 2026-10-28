@@ -15,7 +15,7 @@ namespace Notepads.Views.Settings
 
     public sealed partial class AboutPage : Page
     {
-        public string AppName => App.ApplicationName;
+        public string AppName => App.DisplayName;
 
         public string AppVersion => $"v{GetAppVersion()}";
 

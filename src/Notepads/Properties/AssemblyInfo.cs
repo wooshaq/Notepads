@@ -4,11 +4,11 @@ using System.Runtime.InteropServices;
 // General Information about an assembly is controlled through the following 
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
-[assembly: AssemblyTitle("Notepads")]
+[assembly: AssemblyTitle("Sublime Pad")]
 [assembly: AssemblyDescription("A modern, lightweight text editor with a minimalist design.")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("")]
-[assembly: AssemblyProduct("Notepads")]
+[assembly: AssemblyProduct("Sublime Pad")]
 [assembly: AssemblyCopyright("Copyright © 2019-2024 Jackie (Jiaqi) Liu")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]

@@ -15,8 +15,8 @@
   <mp:PhoneIdentity PhoneProductId="df234254-de03-48f0-80a0-11b5082ec740" PhonePublisherId="00000000-0000-0000-0000-000000000000" />
   
   <Properties>
-    <DisplayName>Notepads App</DisplayName>
-    <PublisherDisplayName>Jackie Liu</PublisherDisplayName>
+    <DisplayName>Sublime Pad</DisplayName>
+    <PublisherDisplayName>wooshaq</PublisherDisplayName>
     <Logo>Assets\StoreLogo.png</Logo>
   </Properties>
   
@@ -34,7 +34,7 @@
                  EntryPoint="Notepads.App"
                  desktop4:SupportsMultipleInstances="true"
                  iot2:SupportsMultipleInstances="true">
-      <uap:VisualElements DisplayName="Notepads"
+      <uap:VisualElements DisplayName="Sublime Pad"
                           Square150x150Logo="Assets\Square150x150Logo.png"
                           Square44x44Logo="Assets\Square44x44Logo.png"
                           Description="A modern, lightweight text editor with a minimalist design."
@@ -42,7 +42,7 @@
         <uap:DefaultTile Wide310x150Logo="Assets\Wide310x150Logo.png"
                          Square71x71Logo="Assets\SmallTile.png"
                          Square310x310Logo="Assets\LargeTile.png"
-                         ShortName="Notepads">
+                         ShortName="Sublime Pad">
           <uap:ShowNameOnTiles>
             <uap:ShowOn Tile="square150x150Logo" />
             <uap:ShowOn Tile="wide310x150Logo" />
@@ -56,7 +56,7 @@
         <uap:Extension Category="windows.protocol">
           <uap:Protocol Name="notepads">
             <uap:Logo>Assets\appicon_w.png</uap:Logo>
-            <uap:DisplayName>Notepads URI Scheme</uap:DisplayName>
+            <uap:DisplayName>Sublime Pad URI Scheme</uap:DisplayName>
           </uap:Protocol>
         </uap:Extension>
         <uap5:Extension Category="windows.appExecutionAlias" Executable="Notepads.exe" EntryPoint="Notepads.App">

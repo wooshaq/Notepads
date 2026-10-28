@@ -150,7 +150,7 @@
     <comment>DiffViewer: Header's text for old text (Before changes).</comment>
   </data>
   <data name="ErrorMessage_NotepadsFileSizeLimit" xml:space="preserve">
-    <value>Notepads nie wspiera plików większych niż 1MB w obecnej fazie rozwoju.</value>
+    <value>Sublime Pad nie wspiera plików większych niż 1MB w obecnej fazie rozwoju.</value>
     <comment>ErrorMessage: NotepadsFileSizeLimit text.</comment>
   </data>
   <data name="FileOpenErrorDialog_Content" xml:space="preserve">

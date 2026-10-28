@@ -29,6 +29,10 @@ namespace Notepads
     {
         public static string ApplicationName = "Notepads";
 
+        /// <summary>Name shown to the user (personal build). ApplicationName stays "Notepads"
+        /// because the instance mutex, command line parsing and drag and drop rely on it.</summary>
+        public static string DisplayName = "Sublime Pad";
+
         public static Guid InstanceId { get; } = Guid.NewGuid();
 
         public static bool IsPrimaryInstance = false;

@@ -30,7 +30,7 @@ jobs:
         shell: pwsh
         run: |
           $cert = New-SelfSignedCertificate -Type Custom -Subject "CN=wooshaq" `
-            -KeyUsage DigitalSignature -FriendlyName "Notepads Sublime (test)" `
+            -KeyUsage DigitalSignature -FriendlyName "Sublime Pad (test)" `
             -CertStoreLocation "Cert:\CurrentUser\My" `
             -TextExtension @("2.5.29.37={text}1.3.6.1.5.5.7.3.3", "2.5.29.19={text}")
           $pwd = ConvertTo-SecureString -String "notepads" -Force -AsPlainText
@@ -86,22 +86,22 @@ jobs:
       - name: Upload Setup.exe
         uses: actions/upload-artifact@v4
         with:
-          name: Notepads-Sublime-Setup
-          path: Artifacts/Notepads-Sublime-Setup.exe
+          name: Sublime-Pad-Setup
+          path: Artifacts/Sublime-Pad-Setup.exe
 
       - name: Upload raw MSIX package
         uses: actions/upload-artifact@v4
         with:
-          name: Notepads-Sublime-x64-msix
+          name: Sublime-Pad-x64-msix
           path: Artifacts
 
       - name: Collect release files
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path release | Out-Null
-          Copy-Item Artifacts\Notepads-Sublime-Setup.exe "release\Notepads-Sublime-Setup-$env:APP_VERSION.exe"
-          Copy-Item pkg\Notepads.msix "release\Notepads-Sublime-$env:APP_VERSION-x64.msix"
-          Copy-Item pkg\Notepads-Sublime.cer release\Notepads-Sublime-certyfikat.cer
+          Copy-Item Artifacts\Sublime-Pad-Setup.exe "release\Sublime-Pad-Setup-$env:APP_VERSION.exe"
+          Copy-Item pkg\Notepads.msix "release\Sublime-Pad-$env:APP_VERSION-x64.msix"
+          Copy-Item pkg\Notepads-Sublime.cer release\Sublime-Pad-certyfikat.cer
           Compress-Archive -Path pkg\Dependencies\* -DestinationPath release\Dependencies-x64.zip
           Get-ChildItem release
 
@@ -110,15 +110,15 @@ jobs:
         with:
           tag_name: v${{ env.APP_VERSION }}
           target_commitish: ${{ github.sha }}
-          name: Notepads Sublime ${{ env.APP_VERSION }}
+          name: Sublime Pad ${{ env.APP_VERSION }}
           body: |
-            Prywatny build Notepads z minimapą, stałym paskiem przewijania i przewijaniem za koniec pliku.
+            Sublime Pad: prywatny build Notepads z minimapą, stałym paskiem przewijania i przewijaniem za koniec pliku.
 
-            **Instalacja przez Setup.exe:** uruchom `Notepads-Sublime-Setup-*.exe`. Niektóre antywirusy mogą go flagować heurystycznie, bo jest niepodpisanym instalatorem.
+            **Instalacja przez Setup.exe:** uruchom `Sublime-Pad-Setup-*.exe`. Niektóre antywirusy mogą go flagować heurystycznie, bo jest niepodpisanym instalatorem.
 
             **Instalacja bez exe:**
-            1. Dwuklik na `Notepads-Sublime-certyfikat.cer`, wybierz „Zainstaluj certyfikat”, potem „Komputer lokalny” i magazyn „Zaufane osoby”.
-            2. Dwuklik na `Notepads-Sublime-*-x64.msix` i „Zainstaluj”. Jeśli instalator zgłosi brak zależności, rozpakuj `Dependencies-x64.zip` i najpierw zainstaluj zawarte w nim pliki `.appx`.
+            1. Dwuklik na `Sublime-Pad-certyfikat.cer`, wybierz „Zainstaluj certyfikat”, potem „Komputer lokalny” i magazyn „Zaufane osoby”.
+            2. Dwuklik na `Sublime-Pad-*-x64.msix` i „Zainstaluj”. Jeśli instalator zgłosi brak zależności, rozpakuj `Dependencies-x64.zip` i najpierw zainstaluj zawarte w nim pliki `.appx`.
 
             Zbudowane z commita ${{ github.sha }}.
           files: release/*
