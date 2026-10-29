@@ -91,7 +91,7 @@ namespace Notepads.Services
                     if (keywords == null) continue;
                     foreach (var keyword in keywords)
                     {
-                        if (line.IndexOf(keyword, StringComparison.CurrentCultureIgnoreCase) >= 0)
+                        if (line.IndexOf(keyword, StringComparison.OrdinalIgnoreCase) >= 0)
                         {
                             color = _colors[i];
                             return true;

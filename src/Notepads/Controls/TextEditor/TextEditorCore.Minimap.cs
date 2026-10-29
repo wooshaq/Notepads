@@ -517,6 +517,9 @@ namespace Notepads.Controls.TextEditor
             var last = Math.Min(lineCount - 1, (int)Math.Ceiling((g.Offset + height) / rowHeight) + 1);
             var builder = new StringBuilder(MinimapMaxCharsPerLine);
 
+            // Keyword line marks first, so the minimap text stays on top
+            DrawKeywordMarksOnMinimap(ds, first, last, topPadding, rowHeight, g.Offset, width);
+
             for (var i = first; i <= last; i++)
             {
                 var text = PrepareMinimapLine(lines[i], builder);
