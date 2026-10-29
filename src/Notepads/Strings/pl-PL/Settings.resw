@@ -444,4 +444,13 @@
   <data name="PersonalizationPage_WindowTintSettings_Description.Text" xml:space="preserve">
     <value>Miesza wybrany kolor z szarym tłem okna, edytora i minimapy.</value>
   </data>
+  <data name="TextAndEditorPage_KeywordHighlightSettings_Title.Text" xml:space="preserve">
+    <value>Podświetlanie linii ze słowami kluczowymi</value>
+  </data>
+  <data name="TextAndEditorPage_KeywordHighlightSettings_Description.Text" xml:space="preserve">
+    <value>Linie zawierające którekolwiek ze słów (oddzielone przecinkami, wielkość liter bez znaczenia) dostają kolor danego wiersza. Gdy linia pasuje do kilku wierszy, wygrywa pierwszy. Kliknij kwadrat koloru, żeby go zmienić; przezroczystość też działa.</value>
+  </data>
+  <data name="TextAndEditorPage_KeywordHighlightSettings_Placeholder" xml:space="preserve">
+    <value>np. www, .com, napisy</value>
+  </data>
 </root>

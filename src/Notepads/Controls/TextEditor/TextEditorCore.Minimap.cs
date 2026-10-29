@@ -127,6 +127,8 @@ namespace Notepads.Controls.TextEditor
             }
 
             ActualThemeChanged += OnActualThemeChangedForMinimap;
+
+            InitializeKeywordHighlight();
         }
 
         private void HookContentWheelHandlerForPastEnd()
@@ -142,6 +144,7 @@ namespace Notepads.Controls.TextEditor
         private void DisposeSublimeLikeFeatures()
         {
             ActualThemeChanged -= OnActualThemeChangedForMinimap;
+            DisposeKeywordHighlight();
 
             if (ScrollPastEndEnabled)
             {
@@ -196,6 +199,7 @@ namespace Notepads.Controls.TextEditor
 
             if (updateScrollPastEnd) UpdateScrollPastEndSpace();
             SyncEditorVerticalScrollBar();
+            UpdateKeywordHighlights();
             _minimapCanvas?.Invalidate();
         }
 

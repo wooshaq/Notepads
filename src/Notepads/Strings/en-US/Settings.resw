@@ -444,4 +444,13 @@
   <data name="PersonalizationPage_WindowTintSettings_Description.Text" xml:space="preserve">
     <value>Mixes the chosen color into the gray background of the window, the editor and the minimap.</value>
   </data>
+  <data name="TextAndEditorPage_KeywordHighlightSettings_Title.Text" xml:space="preserve">
+    <value>Keyword Line Highlighting</value>
+  </data>
+  <data name="TextAndEditorPage_KeywordHighlightSettings_Description.Text" xml:space="preserve">
+    <value>Lines that contain any of the keywords (comma separated, case-insensitive) get the colour of that row. When a line matches more than one row, the first row wins. Click a colour square to change it; transparency is supported.</value>
+  </data>
+  <data name="TextAndEditorPage_KeywordHighlightSettings_Placeholder" xml:space="preserve">
+    <value>e.g. www, .com, subtitles</value>
+  </data>
 </root>

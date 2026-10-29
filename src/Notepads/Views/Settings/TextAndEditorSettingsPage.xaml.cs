@@ -93,6 +93,8 @@ namespace Notepads.Views.Settings
         {
             InitializeComponent();
 
+            BuildKeywordHighlightRules();
+
             TextWrappingToggle.IsOn = (AppSettingsService.EditorDefaultTextWrapping == TextWrapping.Wrap);
             HighlightMisspelledWordsToggle.IsOn = AppSettingsService.IsHighlightMisspelledWordsEnabled;
             LineHighlighterToggle.IsOn = AppSettingsService.EditorDisplayLineHighlighter;
@@ -471,6 +473,65 @@ namespace Notepads.Views.Settings
                 CustomSearchUrl.IsEnabled = false;
                 CustomSearchUrl.Text = AppSettingsService.EditorCustomMadeSearchUrl;
                 CustomUrlErrorReport.Visibility = Visibility.Collapsed;
+            }
+        }
+
+        // Sublime Pad: five rules of comma separated keywords, each with its own line colour
+        private void BuildKeywordHighlightRules()
+        {
+            var placeholder = _resourceLoader.GetString("TextAndEditorPage_KeywordHighlightSettings_Placeholder");
+
+            for (int i = 0; i < KeywordHighlightService.RuleCount; i++)
+            {
+                var rule = i;
+
+                var swatch = new Windows.UI.Xaml.Shapes.Rectangle
+                {
+                    Width = 20,
+                    Height = 20,
+                    RadiusX = 3,
+                    RadiusY = 3,
+                    Fill = new SolidColorBrush(KeywordHighlightService.GetColor(rule)),
+                };
+
+                var picker = new ColorPicker
+                {
+                    Color = KeywordHighlightService.GetColor(rule),
+                    IsAlphaEnabled = true,
+                    IsAlphaSliderVisible = true,
+                    IsAlphaTextInputVisible = true,
+                    IsHexInputVisible = true,
+                    ColorSpectrumShape = Windows.UI.Xaml.Controls.ColorSpectrumShape.Ring,
+                };
+                picker.ColorChanged += (sender, args) =>
+                {
+                    swatch.Fill = new SolidColorBrush(args.NewColor);
+                    KeywordHighlightService.SetColor(rule, args.NewColor);
+                };
+
+                var colorButton = new Button
+                {
+                    Content = swatch,
+                    Padding = new Thickness(6),
+                    VerticalAlignment = VerticalAlignment.Center,
+                    Flyout = new Flyout { Content = picker },
+                };
+
+                var keywords = new TextBox
+                {
+                    Text = KeywordHighlightService.GetKeywords(rule),
+                    PlaceholderText = placeholder,
+                    Width = 320,
+                    IsSpellCheckEnabled = false,
+                    VerticalAlignment = VerticalAlignment.Center,
+                };
+                keywords.TextChanged += (sender, args) => KeywordHighlightService.SetKeywords(rule, keywords.Text);
+
+                var row = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
+                row.Children.Add(new TextBlock { Text = $"{rule + 1}.", Width = 18, VerticalAlignment = VerticalAlignment.Center });
+                row.Children.Add(colorButton);
+                row.Children.Add(keywords);
+                KeywordHighlightRulesPanel.Children.Add(row);
             }
         }
     }

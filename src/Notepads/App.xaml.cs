@@ -103,6 +103,7 @@ namespace Notepads
 
                 ThemeSettingsService.Initialize();
                 AppSettingsService.Initialize();
+                KeywordHighlightService.Initialize();
             }
 
             var appLaunchSettings = new Dictionary<string, string>()

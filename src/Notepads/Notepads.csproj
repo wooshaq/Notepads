@@ -172,6 +172,7 @@
     </Compile>
     <Compile Include="Controls\TextEditor\TextEditorCore.JoinText.cs" />
     <Compile Include="Controls\TextEditor\TextEditorCore.ExternalEventListener.cs" />
+    <Compile Include="Controls\TextEditor\TextEditorCore.KeywordHighlight.cs" />
     <Compile Include="Controls\TextEditor\TextEditorCore.LineHighlighter.cs" />
     <Compile Include="Controls\TextEditor\TextEditorCore.LineNumbers.cs" />
     <Compile Include="Controls\TextEditor\TextEditorCore.Minimap.cs" />
@@ -260,6 +261,7 @@
     <Compile Include="Brushes\HostBackdropAcrylicBrush.cs" />
     <Compile Include="Utilities\LineEndingUtility.cs" />
     <Compile Include="Services\AppSettingsService.cs" />
+    <Compile Include="Services\KeywordHighlightService.cs" />
     <Compile Include="Services\ThemeSettingsService.cs" />
     <Compile Include="Controls\Dialog\NotepadsDialog.cs" />
     <Compile Include="Utilities\SearchEngineUtility.cs" />
