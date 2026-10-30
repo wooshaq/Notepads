@@ -60,6 +60,10 @@ namespace Notepads.Controls.TextEditor
         private readonly TranslateTransform _pastEndTextTransform = new TranslateTransform();
         private readonly TranslateTransform _pastEndLineNumberTransform = new TranslateTransform();
         private readonly TranslateTransform _pastEndHighlighterTransform = new TranslateTransform();
+        // The text host (with the ScrollViewer and its scroll bars) moves up while scrolled past
+        // the end; this moves the horizontal scroll bar back down so it stays at the window bottom.
+        private readonly TranslateTransform _pastEndHorizontalScrollBarTransform = new TranslateTransform();
+        private ScrollBar _pastEndHorizontalScrollBar;
         private UIElement _contentScrollViewerContent;
 
         private struct MinimapGeometry
@@ -229,9 +233,22 @@ namespace Notepads.Controls.TextEditor
             _pastEndTextTransform.Y = -value;
             _pastEndLineNumberTransform.Y = -value;
             _pastEndHighlighterTransform.Y = -value;
+            PinHorizontalScrollBar();
+            _pastEndHorizontalScrollBarTransform.Y = value;
 
             SyncEditorVerticalScrollBar();
             _minimapCanvas?.Invalidate();
+        }
+
+        private void PinHorizontalScrollBar()
+        {
+            if (_pastEndHorizontalScrollBar != null || _contentScrollViewer == null) return;
+            if (VisualTreeHelper.GetChildrenCount(_contentScrollViewer) == 0) return;
+            if (!(VisualTreeHelper.GetChild(_contentScrollViewer, 0) is FrameworkElement root)) return;
+            if (!(root.FindName("HorizontalScrollBar") is ScrollBar scrollBar)) return;
+
+            _pastEndHorizontalScrollBar = scrollBar;
+            _pastEndHorizontalScrollBar.RenderTransform = _pastEndHorizontalScrollBarTransform;
         }
 
         /// <summary>Re-clamp after text / size changes; keep caret visible.</summary>
