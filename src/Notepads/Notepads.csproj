@@ -175,6 +175,7 @@
     <Compile Include="Controls\TextEditor\TextEditorCore.KeywordHighlight.cs" />
     <Compile Include="Controls\TextEditor\TextEditorCore.LineHighlighter.cs" />
     <Compile Include="Controls\TextEditor\TextEditorCore.LineNumbers.cs" />
+    <Compile Include="Controls\TextEditor\TextEditorCore.LineCleanup.cs" />
     <Compile Include="Controls\TextEditor\TextEditorCore.Minimap.cs" />
     <Compile Include="Controls\TextEditor\TextEditorCore.MoveText.cs" />
     <Compile Include="Extensions\DispatcherExtensions.cs" />

@@ -342,6 +342,12 @@ namespace Notepads.Controls.TextEditor
 
         protected override void OnKeyDown(KeyRoutedEventArgs args)
         {
+            if (TryDeleteWholeLineSelection(args.Key))
+            {
+                args.Handled = true;
+                return;
+            }
+
             var result = _keyboardCommandHandler.Handle(args);
 
             if (result.ShouldHandle)

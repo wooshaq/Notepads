@@ -720,6 +720,8 @@
 
         private async Task<TextFile> SaveContentToFileAsync(StorageFile file)
         {
+            // Sublime Pad: drop empty / whitespace-only lines at the end of the file
+            TextEditorCore.TrimTrailingBlankLines();
             var text = TextEditorCore.GetText();
             var encoding = RequestedEncoding ?? LastSavedSnapshot.Encoding;
             var lineEnding = RequestedLineEnding ?? LastSavedSnapshot.LineEnding;
