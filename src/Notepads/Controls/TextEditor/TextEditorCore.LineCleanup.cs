@@ -6,10 +6,15 @@ namespace Notepads.Controls.TextEditor
 {
     using System;
     using System.Collections.Generic;
+    using Windows.Devices.Input;
+    using Windows.Foundation;
     using Windows.System;
     using Windows.UI.Core;
     using Windows.UI.Text;
     using Windows.UI.Xaml;
+    using Windows.UI.Xaml.Input;
+    using Windows.UI.Xaml.Media;
+    using Windows.UI.Xaml.Shapes;
     using Notepads.Services;
 
     public partial class TextEditorCore
@@ -126,6 +131,164 @@ namespace Notepads.Controls.TextEditor
                     new Dictionary<string, string> { { "Exception", ex.ToString() } });
                 return false;
             }
+        }
+        // ---------------------------------------------------------------------------------
+        // Mouse drag over whole line(s): selection is extended to the end of the line above
+        // and a caret is shown there, so Backspace removes the line in one press.
+        // ---------------------------------------------------------------------------------
+
+        private bool _isMouseSelecting;
+        private int _lineSelectCaretPosition = -1;
+        private int _lineSelectEndPosition = -1;
+        private Rectangle _lineSelectCaret;
+        private DispatcherTimer _lineSelectCaretTimer;
+
+        private void InitializeLineSelect()
+        {
+            AddHandler(PointerPressedEvent, new PointerEventHandler(OnPointerPressedForLineSelect), true);
+            AddHandler(PointerReleasedEvent, new PointerEventHandler(OnPointerReleasedForLineSelect), true);
+            AddHandler(PointerCaptureLostEvent, new PointerEventHandler(OnPointerReleasedForLineSelect), true);
+            GotFocus += OnFocusChangedForLineSelect;
+            LostFocus += OnFocusChangedForLineSelect;
+        }
+
+        private void DisposeLineSelect()
+        {
+            RemoveHandler(PointerPressedEvent, new PointerEventHandler(OnPointerPressedForLineSelect));
+            RemoveHandler(PointerReleasedEvent, new PointerEventHandler(OnPointerReleasedForLineSelect));
+            RemoveHandler(PointerCaptureLostEvent, new PointerEventHandler(OnPointerReleasedForLineSelect));
+            GotFocus -= OnFocusChangedForLineSelect;
+            LostFocus -= OnFocusChangedForLineSelect;
+
+            if (_lineSelectCaretTimer != null)
+            {
+                _lineSelectCaretTimer.Stop();
+                _lineSelectCaretTimer.Tick -= OnLineSelectCaretTick;
+                _lineSelectCaretTimer = null;
+            }
+
+            if (_lineSelectCaret != null)
+            {
+                _lineHighlighterAndIndicatorCanvas?.Children.Remove(_lineSelectCaret);
+                _lineSelectCaret = null;
+            }
+        }
+
+        private void OnPointerPressedForLineSelect(object sender, PointerRoutedEventArgs args)
+        {
+            var point = args.GetCurrentPoint(this);
+            _isMouseSelecting = args.Pointer.PointerDeviceType == PointerDeviceType.Mouse &&
+                                point.Properties.IsLeftButtonPressed;
+        }
+
+        private void OnPointerReleasedForLineSelect(object sender, PointerRoutedEventArgs args)
+        {
+            if (!_isMouseSelecting) return;
+            _isMouseSelecting = false;
+
+            try
+            {
+                ExtendWholeLineSelectionToLineAbove();
+            }
+            catch (Exception ex)
+            {
+                LoggingService.LogError($"[{nameof(TextEditorCore)}] Failed to extend whole line selection: {ex}");
+            }
+        }
+
+        private void ExtendWholeLineSelectionToLineAbove()
+        {
+            Document.GetText(TextGetOptions.None, out var raw);
+            var text = TrimRichEditBoxText(raw);
+
+            var start = Math.Min(Document.Selection.StartPosition, Document.Selection.EndPosition);
+            var end = Math.Max(Document.Selection.StartPosition, Document.Selection.EndPosition);
+            if (end > text.Length) end = text.Length;
+            if (start <= 0 || start >= end) return; // first line or empty selection: nothing to do
+
+            var startsAtLineStart = text[start - 1] == RichEditBoxDefaultLineEnding;
+            var endsAtLineEnd = end == text.Length || text[end] == RichEditBoxDefaultLineEnding;
+            if (!startsAtLineStart || !endsAtLineEnd) return;
+
+            // Anchor at the end of the selected line(s), active end (caret) at the end of the line above
+            _lineSelectCaretPosition = start - 1;
+            _lineSelectEndPosition = end;
+            Document.Selection.SetRange(end, start - 1);
+            UpdateLineSelectCaret();
+        }
+
+        private void OnFocusChangedForLineSelect(object sender, RoutedEventArgs _)
+        {
+            UpdateLineSelectCaret();
+        }
+
+        /// <summary>
+        /// Shows a caret at the end of the line above while the extended whole-line selection is active
+        /// (RichEditBox does not draw its own caret while text is selected).
+        /// </summary>
+        private void UpdateLineSelectCaret()
+        {
+            if (!_loaded || _lineHighlighterAndIndicatorCanvas == null) return;
+
+            var start = Math.Min(Document.Selection.StartPosition, Document.Selection.EndPosition);
+            var end = Math.Max(Document.Selection.StartPosition, Document.Selection.EndPosition);
+
+            var active = _lineSelectCaretPosition >= 0 &&
+                         start == _lineSelectCaretPosition &&
+                         end == _lineSelectEndPosition &&
+                         FocusState != FocusState.Unfocused;
+
+            if (!active)
+            {
+                if (start != _lineSelectCaretPosition || end != _lineSelectEndPosition)
+                {
+                    _lineSelectCaretPosition = -1;
+                    _lineSelectEndPosition = -1;
+                }
+
+                if (_lineSelectCaret != null) _lineSelectCaret.Visibility = Visibility.Collapsed;
+                _lineSelectCaretTimer?.Stop();
+                return;
+            }
+
+            if (_lineSelectCaret == null)
+            {
+                _lineSelectCaret = new Rectangle { IsHitTestVisible = false, Width = 2 };
+                _lineHighlighterAndIndicatorCanvas.Children.Add(_lineSelectCaret);
+            }
+
+            if (_lineSelectCaretTimer == null)
+            {
+                _lineSelectCaretTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(530) };
+                _lineSelectCaretTimer.Tick += OnLineSelectCaretTick;
+            }
+
+            Document.GetRange(_lineSelectCaretPosition, _lineSelectCaretPosition)
+                .GetRect(PointOptions.ClientCoordinates, out var rect, out _);
+
+            var contentOrigin = _contentScrollViewer
+                .TransformToVisual(_lineHighlighterAndIndicatorCanvas)
+                .TransformPoint(new Point(0, 0));
+
+            _lineSelectCaret.Fill = Foreground ?? new SolidColorBrush(Windows.UI.Colors.Gray);
+            _lineSelectCaret.Height = Math.Max(rect.Height, GetSingleLineHeight());
+            _lineSelectCaret.Margin = new Thickness(
+                // 2 px to the left: the selection highlight of the line break would cover it otherwise
+                contentOrigin.X + Padding.Left + rect.X - _contentScrollViewer.HorizontalOffset - 2,
+                rect.Y + Padding.Top,
+                0,
+                0);
+            _lineSelectCaret.Visibility = Visibility.Visible;
+            _lineSelectCaretTimer.Stop();
+            _lineSelectCaretTimer.Start();
+        }
+
+        private void OnLineSelectCaretTick(object sender, object _)
+        {
+            if (_lineSelectCaret == null) return;
+            _lineSelectCaret.Visibility = _lineSelectCaret.Visibility == Visibility.Visible
+                ? Visibility.Collapsed
+                : Visibility.Visible;
         }
     }
 }

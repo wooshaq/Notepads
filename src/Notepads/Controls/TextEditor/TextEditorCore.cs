@@ -190,6 +190,7 @@ namespace Notepads.Controls.TextEditor
             Microsoft.Toolkit.Uwp.UI.ScrollViewerExtensions.SetEnableMiddleClickScrolling(_contentScrollViewer, true);
 
             InitializeSublimeLikeFeatures();
+            InitializeLineSelect();
         }
 
         // Unhook events and clear state
@@ -237,6 +238,7 @@ namespace Notepads.Controls.TextEditor
             FontSizeChanged -= OnFontSizeChanged;
 
             DisposeSublimeLikeFeatures();
+            DisposeLineSelect();
 
             UnhookExternalEvents();
 
@@ -432,6 +434,7 @@ namespace Notepads.Controls.TextEditor
 
             NormalizePastEndAfterScroll();
             RefreshSublimeLikeFeatures();
+            UpdateLineSelectCaret();
         }
 
         private void OnContentScrollViewerSizeChanged(object sender, SizeChangedEventArgs _)
@@ -444,6 +447,7 @@ namespace Notepads.Controls.TextEditor
         {
             UpdateLineHighlighterAndIndicator();
             RefreshSublimeLikeFeatures(updateScrollPastEnd: true);
+            UpdateLineSelectCaret();
         }
 
         private void OnSizeChanged(object sender, SizeChangedEventArgs _)
@@ -464,6 +468,7 @@ namespace Notepads.Controls.TextEditor
             UpdateLineHighlighterAndIndicator();
             UpdateActiveLineNumberIfNeeded();
             EnsureCaretVisibleWithPastEnd();
+            UpdateLineSelectCaret();
         }
 
         private void OnVerticalScrollBarValueChanged(object sender, RangeBaseValueChangedEventArgs _)
