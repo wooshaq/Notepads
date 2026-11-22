@@ -189,6 +189,7 @@ namespace Notepads.Controls.TextEditor
             try
             {
                 ExtendWholeLineSelectionToLineAbove();
+                UpdateLineSelectCaret();
             }
             catch (Exception ex)
             {
@@ -223,32 +224,44 @@ namespace Notepads.Controls.TextEditor
         }
 
         /// <summary>
-        /// Shows a caret at the end of the line above while the extended whole-line selection is active
-        /// (RichEditBox does not draw its own caret while text is selected).
+        /// Sublime-like caret: RichEditBox hides its own caret while text is selected, so a caret is
+        /// drawn at the active end of the selection, live while dragging and for Shift + arrows.
+        /// While a mouse drag covers whole line(s) the caret is shown at the end of the line above
+        /// (where it lands after Backspace); on release the selection is extended there.
         /// </summary>
         private void UpdateLineSelectCaret()
         {
-            if (!_loaded || _lineHighlighterAndIndicatorCanvas == null) return;
+            if (!_loaded || _lineHighlighterAndIndicatorCanvas == null || _contentScrollViewer == null) return;
 
-            var start = Math.Min(Document.Selection.StartPosition, Document.Selection.EndPosition);
-            var end = Math.Max(Document.Selection.StartPosition, Document.Selection.EndPosition);
+            var selection = Document.Selection;
+            var start = Math.Min(selection.StartPosition, selection.EndPosition);
+            var end = Math.Max(selection.StartPosition, selection.EndPosition);
 
-            var active = _lineSelectCaretPosition >= 0 &&
-                         start == _lineSelectCaretPosition &&
-                         end == _lineSelectEndPosition &&
-                         FocusState != FocusState.Unfocused;
-
-            if (!active)
+            if (start != _lineSelectCaretPosition || end != _lineSelectEndPosition)
             {
-                if (start != _lineSelectCaretPosition || end != _lineSelectEndPosition)
-                {
-                    _lineSelectCaretPosition = -1;
-                    _lineSelectEndPosition = -1;
-                }
+                _lineSelectCaretPosition = -1;
+                _lineSelectEndPosition = -1;
+            }
 
+            if (start == end || FocusState == FocusState.Unfocused)
+            {
                 if (_lineSelectCaret != null) _lineSelectCaret.Visibility = Visibility.Collapsed;
                 _lineSelectCaretTimer?.Stop();
                 return;
+            }
+
+            int caretPosition;
+            if (_lineSelectCaretPosition >= 0)
+            {
+                caretPosition = _lineSelectCaretPosition; // already extended to the line above
+            }
+            else if (_isMouseSelecting && IsWholeLineSelection(start, end))
+            {
+                caretPosition = start - 1; // live preview: end of the line above
+            }
+            else
+            {
+                caretPosition = selection.Options.HasFlag(SelectionOptions.StartActive) ? start : end;
             }
 
             if (_lineSelectCaret == null)
@@ -263,24 +276,35 @@ namespace Notepads.Controls.TextEditor
                 _lineSelectCaretTimer.Tick += OnLineSelectCaretTick;
             }
 
-            Document.GetRange(_lineSelectCaretPosition, _lineSelectCaretPosition)
+            Document.GetRange(caretPosition, caretPosition)
                 .GetRect(PointOptions.ClientCoordinates, out var rect, out _);
 
             var contentOrigin = _contentScrollViewer
                 .TransformToVisual(_lineHighlighterAndIndicatorCanvas)
                 .TransformPoint(new Point(0, 0));
 
+            // At the left edge of the selection the highlight would cover the caret: move it 2 px left
+            var shift = caretPosition == start ? -2 : -1;
+
             _lineSelectCaret.Fill = Foreground ?? new SolidColorBrush(Windows.UI.Colors.Gray);
             _lineSelectCaret.Height = Math.Max(rect.Height, GetSingleLineHeight());
             _lineSelectCaret.Margin = new Thickness(
-                // 2 px to the left: the selection highlight of the line break would cover it otherwise
-                contentOrigin.X + Padding.Left + rect.X - _contentScrollViewer.HorizontalOffset - 2,
+                contentOrigin.X + Padding.Left + rect.X - _contentScrollViewer.HorizontalOffset + shift,
                 rect.Y + Padding.Top,
                 0,
                 0);
             _lineSelectCaret.Visibility = Visibility.Visible;
             _lineSelectCaretTimer.Stop();
             _lineSelectCaretTimer.Start();
+        }
+
+        private bool IsWholeLineSelection(int start, int end)
+        {
+            var text = GetText();
+            if (end > text.Length) end = text.Length;
+            if (start <= 0 || start >= end || start > text.Length) return false;
+            return text[start - 1] == RichEditBoxDefaultLineEnding &&
+                   (end == text.Length || text[end] == RichEditBoxDefaultLineEnding);
         }
 
         private void OnLineSelectCaretTick(object sender, object _)
